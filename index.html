@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LocalLLM Workspace</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+
     <style>
         :root {
             --bg-color: #0b0c0e;
@@ -18,6 +23,8 @@
             --gemini-blue: #4285f4;
             --gemini-purple: #9b51e0;
             --gemini-pink: #e91e63;
+            --code-bg: #18181c;
+            --code-header-bg: #1e1e24;
             --font-main: cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
@@ -31,6 +38,8 @@
             --input-border: #e0e4e9;
             --accent-color: #1a73e8;
             --user-msg-bg: #e9eef6;
+            --code-bg: #f4f5f7;
+            --code-header-bg: #e8eaed;
         }
 
         * {
@@ -206,10 +215,10 @@
             gap: 6px;
         }
 
+        /* Rich Text Parsing Styles Rules */
         .msg-text {
             font-size: 1.05rem;
             line-height: 1.65;
-            white-space: pre-wrap;
             word-wrap: break-word;
             max-width: 100%;
         }
@@ -221,6 +230,7 @@
             border-bottom-right-radius: 6px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.04);
             color: #ffffff;
+            white-space: pre-wrap; 
         }
         
         .light-theme .message-row.user .msg-text {
@@ -230,6 +240,121 @@
         .message-row.assistant .msg-text {
             padding: 6px 0;
             width: 100%;
+        }
+
+        /* Markdown Production Typography Rules styling overrides */
+        .msg-text p {
+            margin-bottom: 12px;
+        }
+        .msg-text p:last-child {
+            margin-bottom: 0;
+        }
+        .msg-text ul, .msg-text ol {
+            margin: 8px 0 14px 24px;
+        }
+        .msg-text li {
+            margin-bottom: 4px;
+        }
+        
+        /* Premium Wrapped Production Code block Architecture */
+        .code-container {
+            background-color: var(--code-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            margin: 16px 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--code-header-bg);
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--input-border);
+            user-select: none;
+        }
+
+        .code-lang {
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: lowercase;
+        }
+
+        .code-copy-btn {
+            background: transparent;
+            border: 1px solid var(--input-border);
+            color: var(--text-color);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .code-copy-btn:hover {
+            background: rgba(128, 128, 128, 0.12);
+            border-color: rgba(128, 128, 128, 0.4);
+        }
+
+        .code-copy-btn.copied {
+            background: rgba(46, 204, 113, 0.15);
+            border-color: rgba(46, 204, 113, 0.4);
+            color: #2ecc71;
+        }
+
+        .msg-text pre {
+            background-color: transparent;
+            border: none;
+            padding: 16px;
+            margin: 0;
+            overflow-x: auto;
+        }
+
+        .msg-text code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.92rem;
+            border-radius: 4px;
+        }
+
+        /* Inline code logic overrides */
+        .msg-text :not(pre) > code {
+            background-color: var(--code-bg);
+            padding: 3px 6px;
+            border: 1px solid var(--input-border);
+        }
+
+        /* Streaming Dynamic Table & Image Adaptations */
+        .msg-text table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 16px 0;
+            font-size: 0.95rem;
+        }
+        .msg-text th, .msg-text td {
+            border: 1px solid var(--input-border);
+            padding: 10px 14px;
+            text-align: left;
+        }
+        .msg-text th {
+            background-color: var(--code-bg);
+            font-weight: 600;
+        }
+        .msg-text img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            margin: 12px 0;
+            border: 1px solid var(--input-border);
         }
 
         /* Gemini Unified Floating Input Area */
@@ -454,13 +579,11 @@
 <body>
 
     <div class="main-container">
-        <!-- Progress Header -->
         <div class="progress-bar-container">
             <progress id="download-progress" value="0" max="100"></progress>
             <div id="status" class="status-strip">Initializing WebGPU sandbox...</div>
         </div>
 
-        <!-- Upper Navigation Row -->
         <div class="navbar">
             <div class="brand-group">
                 <div class="brand">LocalLLM</div>
@@ -473,25 +596,21 @@
             </div>
         </div>
 
-        <!-- Interactive Chat Screen -->
         <div class="chat-scroller">
             <div id="chat-content" class="chat-content">
                 <div class="message-row assistant">
                     <div class="msg-avatar">LocalLLM Core</div>
-                    <div class="msg-text">Welcome to your secure AI workspace. Choose a processing tier using the dropdown menu inside the chat box on the right. All models run completely client-side in your browser cache via local WebGPU acceleration.</div>
+                    <div id="welcome-msg" class="msg-text">Welcome to your secure AI workspace. Choose a processing tier using the dropdown menu inside the chat box on the right. All models run completely client-side in your browser cache via local WebGPU acceleration.</div>
                 </div>
             </div>
         </div>
 
-        <!-- Unified Gemini Floating Input Bar Panel -->
         <div class="input-panel">
             <div class="input-container-pill">
                 <textarea id="user-input" rows="1" placeholder="Booting AI engine..." disabled></textarea>
                 
-                <!-- Single Horizontal Inline Action Suite -->
                 <div class="input-actions-right">
                     
-                    <!-- Right-aligned Gemini Style Dropdown Menu -->
                     <div class="gemini-dropdown" id="model-dropdown-container">
                         <button class="dropdown-trigger" id="dropdown-trigger-btn" disabled>
                             <span id="current-tier-text">micro</span>
@@ -506,7 +625,6 @@
                         </div>
                     </div>
 
-                    <!-- Voice Input Button -->
                     <button id="mic-btn" class="pill-action-btn" title="Voice Input" disabled>
                         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
@@ -516,7 +634,6 @@
                         </svg>
                     </button>
                     
-                    <!-- Submit button -->
                     <button id="send-btn" class="pill-action-btn" disabled title="Send Message">
                         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -530,6 +647,41 @@
 
     <script type="module">
         import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+
+        // Global Helper: Cleanly escape code strings inside custom layout engines
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Global Configuration for Markdown Processing Pipeline
+        marked.setOptions({
+            breaks: true, 
+            gfm: true     
+        });
+
+        // Intercept Marked Codeblocks to cleanly construct custom component containers with headers
+        const renderer = new marked.Renderer();
+        renderer.code = function(code, lang) {
+            let text = typeof code === 'object' ? code.text : code;
+            let language = typeof code === 'object' ? code.lang : lang;
+            language = language || 'plaintext';
+            
+            return `
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="code-lang">${language}</span>
+                        <button class="code-copy-btn">Copy</button>
+                    </div>
+                    <pre><code class="language-${language}">${escapeHtml(text)}</code></pre>
+                </div>
+            `;
+        };
+        marked.use({ renderer });
 
         const MODEL_REGISTRY = {
             micro: { id: "SmolLM2-360M-Instruct-q4f16_1-MLC", name: "Micro Mode", fullLabel: "SmolLM2 360M (~300MB)" },
@@ -566,6 +718,12 @@
             conversation = [{ role: "system", content: "You are LocalLLM, a helpful, precise, local AI assistant ecosystem running entirely within the user's browser storage context." }];
         }
         resetConversationHistory();
+
+        // Process existing welcome message text cleanly on load
+        const welcomeMsg = document.getElementById("welcome-msg");
+        if (welcomeMsg) {
+            welcomeMsg.innerHTML = marked.parse(welcomeMsg.textContent);
+        }
 
         // Theme Initialization & Storage Logic
         const storedTheme = localStorage.getItem(STORAGE_KEYS.theme);
@@ -609,7 +767,7 @@
             if (content === "__dots__") {
                 textDiv.innerHTML = `<div class="typing-dots"><div></div><div></div><div></div></div>`;
             } else {
-                textDiv.textContent = content;
+                textDiv.innerHTML = (role === "user") ? content : marked.parse(content);
             }
 
             row.appendChild(avatar);
@@ -620,6 +778,33 @@
             scroller.scrollTop = scroller.scrollHeight;
             return textDiv;
         }
+
+        // Production-Grade Global Event Delegation handling copy commands
+        document.addEventListener("click", async (e) => {
+            if (e.target.classList.contains("code-copy-btn")) {
+                const btn = e.target;
+                const container = btn.closest(".code-container");
+                if (!container) return;
+                
+                const codeElement = container.querySelector("code");
+                if (!codeElement) return;
+
+                try {
+                    // Extract text content directly without including HTML markup tokens
+                    await navigator.clipboard.writeText(codeElement.innerText);
+                    
+                    btn.textContent = "Copied!";
+                    btn.classList.add("copied");
+                    
+                    setTimeout(() => {
+                        btn.textContent = "Copy";
+                        btn.classList.remove("copied");
+                    }, 2000);
+                } catch (err) {
+                    console.error("Secure clipboard injection blocked or failed: ", err);
+                }
+            }
+        });
 
         // Custom Dropdown Menu Open/Close handlers
         dropdownTrigger.addEventListener("click", (e) => {
@@ -650,7 +835,6 @@
                 return;
             }
 
-            // Lock controls during transition phases
             userInput.disabled = true;
             sendBtn.disabled = true;
             micBtn.disabled = true;
@@ -683,11 +867,9 @@
                 progressBar.style.display = "none";
                 statusElement.innerText = "LocalLLM engine compiled and operating securely within active browser sandbox.";
                 
-                // Show model names only at top layout frame once cached successfully
                 engineBadge.innerText = `${targetModel.name} — ${targetModel.fullLabel}`;
                 currentModelKey = modelKey;
                 
-                // Save choice to localStorage
                 localStorage.setItem(STORAGE_KEYS.model, modelKey);
 
                 dropdownItems.forEach(item => {
@@ -739,7 +921,14 @@
 
                 for await (const chunk of chunks) {
                     responseText += chunk.choices[0]?.delta?.content || "";
-                    assistantTextContainer.textContent = responseText;
+                    
+                    // Render dynamic markdown wrappers containing the custom header and button structural nodes
+                    assistantTextContainer.innerHTML = marked.parse(responseText);
+                    
+                    // Highlight the raw layout blocks cleanly on the fly
+                    assistantTextContainer.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                    });
                     
                     const scroller = document.querySelector('.chat-scroller');
                     scroller.scrollTop = scroller.scrollHeight;
@@ -815,7 +1004,6 @@
             };
         }
 
-        // Initialize preferred user tier selection from storage, fallback to micro model
         const savedModelPref = localStorage.getItem(STORAGE_KEYS.model);
         const modelToBoot = MODEL_REGISTRY[savedModelPref] ? savedModelPref : "micro";
         bootEngineModel(modelToBoot);
