@@ -242,7 +242,32 @@
             width: 100%;
         }
 
-        /* Markdown Production Typography Rules styling overrides */
+        /* Quick Prompts UI */
+        .quick-prompts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .quick-prompt-btn {
+            background: rgba(128, 128, 128, 0.06);
+            border: 1px solid var(--input-border);
+            color: var(--text-color);
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        .quick-prompt-btn:hover {
+            background: rgba(128, 128, 128, 0.12);
+            border-color: var(--accent-color);
+            transform: translateY(-1px);
+        }
+
         .msg-text p {
             margin-bottom: 12px;
         }
@@ -600,7 +625,19 @@
             <div id="chat-content" class="chat-content">
                 <div class="message-row assistant">
                     <div class="msg-avatar">LocalLLM Core</div>
-                    <div id="welcome-msg" class="msg-text">Welcome to your secure AI workspace. Choose a processing tier using the dropdown menu inside the chat box on the right. All models run completely client-side in your browser cache via local WebGPU acceleration.</div>
+                    <div class="msg-text">
+                        <p>Welcome to your secure AI workspace. Choose a processing tier using the dropdown menu inside the chat box on the right. All models run completely client-side in your browser cache via local WebGPU acceleration.</p>
+                        <strong>Quick Prompts to Test [<i>Choose High Model</i>]</strong>
+                        <div class="quick-prompts">
+                            <button class="quick-prompt-btn">Write a Python script to parse and analyze CSV data</button>
+                            <button class="quick-prompt-btn">Explain quantum computing to a 5-year-old</button>
+                            <button class="quick-prompt-btn">How do I center a div using CSS Flexbox?</button>
+                            <button class="quick-prompt-btn">Create a React component for a to-do list</button>
+                            <button class="quick-prompt-btn">Explain the Fermi Paradox and the Great Filter theory</button>
+                            <button class="quick-prompt-btn">If human consciousness is physical, do we have free will?</button>
+                            <button class="quick-prompt-btn">What are the deepest ethical implications of sentient AI?</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -622,6 +659,7 @@
                             <div class="dropdown-item active" data-tier="micro">micro</div>
                             <div class="dropdown-item" data-tier="low">low</div>
                             <div class="dropdown-item" data-tier="mid">mid</div>
+                            <div class="dropdown-item" data-tier="high">high</div>
                         </div>
                     </div>
 
@@ -686,7 +724,8 @@
         const MODEL_REGISTRY = {
             micro: { id: "SmolLM2-360M-Instruct-q4f16_1-MLC", name: "Micro Mode", fullLabel: "SmolLM2 360M (~300MB)" },
             low: { id: "Llama-3.2-1B-Instruct-q4f16_1-MLC", name: "Low Mode", fullLabel: "Llama 3.2 1B (~880MB)" },
-            mid: { id: "Llama-3.2-3B-Instruct-q4f16_1-MLC", name: "Mid Mode", fullLabel: "Llama 3.2 3B (~2.2GB)" }
+            mid: { id: "Llama-3.2-3B-Instruct-q4f16_1-MLC", name: "Mid Mode", fullLabel: "Llama 3.2 3B (~2.2GB)" },
+            high: { id: "Llama-3.1-8B-Instruct-q4f16_1-MLC", name: "High Mode (Coding)", fullLabel: "Llama 3.1 8B (~4.6GB)" }
         };
 
         const STORAGE_KEYS = {
@@ -719,12 +758,6 @@
         }
         resetConversationHistory();
 
-        // Process existing welcome message text cleanly on load
-        const welcomeMsg = document.getElementById("welcome-msg");
-        if (welcomeMsg) {
-            welcomeMsg.innerHTML = marked.parse(welcomeMsg.textContent);
-        }
-
         // Theme Initialization & Storage Logic
         const storedTheme = localStorage.getItem(STORAGE_KEYS.theme);
         if (storedTheme === "light" || (!storedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)) {
@@ -743,7 +776,15 @@
             chatContent.innerHTML = `
                 <div class="message-row assistant">
                     <div class="msg-avatar">LocalLLM Core</div>
-                    <div class="msg-text">Conversation history cleared. Ready for your next prompt.</div>
+                    <div class="msg-text">
+                        <p>Conversation history cleared. Ready for your next prompt.</p>
+                        <div class="quick-prompts">
+                            <button class="quick-prompt-btn">Write a Python script to scrape a website</button>
+                            <button class="quick-prompt-btn">Explain quantum computing to a 5-year-old</button>
+                            <button class="quick-prompt-btn">How do I center a div using CSS Flexbox?</button>
+                            <button class="quick-prompt-btn">Create a React component for a to-do list</button>
+                        </div>
+                    </div>
                 </div>`;
         });
 
@@ -779,8 +820,17 @@
             return textDiv;
         }
 
-        // Production-Grade Global Event Delegation handling copy commands
+        // Production-Grade Global Event Delegation handling copy commands & Quick Prompts
         document.addEventListener("click", async (e) => {
+            // Quick Prompt Execution
+            if (e.target.classList.contains("quick-prompt-btn")) {
+                if (userInput.disabled) return;
+                userInput.value = e.target.textContent;
+                handleSendMessage();
+                return;
+            }
+
+            // Code Block Copy Execution
             if (e.target.classList.contains("code-copy-btn")) {
                 const btn = e.target;
                 const container = btn.closest(".code-container");
@@ -790,7 +840,6 @@
                 if (!codeElement) return;
 
                 try {
-                    // Extract text content directly without including HTML markup tokens
                     await navigator.clipboard.writeText(codeElement.innerText);
                     
                     btn.textContent = "Copied!";
@@ -1005,7 +1054,7 @@
         }
 
         const savedModelPref = localStorage.getItem(STORAGE_KEYS.model);
-        const modelToBoot = MODEL_REGISTRY[savedModelPref] ? savedModelPref : "micro";
+        const modelToBoot = MODEL_REGISTRY[savedModelPref] ? savedModelPref : "high";
         bootEngineModel(modelToBoot);
     </script>
 </body>
